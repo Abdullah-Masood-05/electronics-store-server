@@ -1,21 +1,31 @@
 import dotenv from "dotenv";
 dotenv.config();
-// console.log("PORT:", process.env.PORT);
-// console.log("MONGO_URI:", process.env.MONGO_URI);
-// console.log("FIREBASE_PROJECT_ID:", process.env.FIREBASE_PROJECT_ID);
-// console.log("FIREBASE_CLIENT_EMAIL:", process.env.FIREBASE_CLIENT_EMAIL);
-// Avoid printing private keys in production!
-console.log("FIREBASE_PRIVATE_KEY exists:", !!process.env.FIREBASE_PRIVATE_KEY);
+
 import app from "./app.js";
 import connectDB from "./config/db.js";
 
+// Validate required environment variables
+const requiredEnvVars = [
+  "PORT",
+  "MONGO_URI",
+  "FIREBASE_PROJECT_ID",
+  "FIREBASE_CLIENT_EMAIL",
+  "FIREBASE_PRIVATE_KEY",
+];
 
+for (const envVar of requiredEnvVars) {
+  if (!process.env[envVar]) {
+    console.error(`❌ Missing required environment variable: ${envVar}`);
+    process.exit(1);
+  }
+}
 
-const PORT = process.env.PORT;
+const PORT = process.env.PORT || 8000;
 
-
-connectDB();
-
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// Connect to MongoDB then start server
+connectDB().then(() => {
+  app.listen(PORT, () => {
+    console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📡 Health check: http://localhost:${PORT}/api/health`);
+  });
 });
