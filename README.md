@@ -110,7 +110,7 @@ NODE_ENV=development
 CLIENT_URL=http://localhost:5173
 
 # MongoDB
-MONGO_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/electronics-store
+MONGO_URI=
 
 # Firebase Admin SDK
 FIREBASE_PROJECT_ID=your-firebase-project-id
