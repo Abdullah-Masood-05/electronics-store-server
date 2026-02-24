@@ -270,4 +270,4 @@ All errors follow a consistent JSON shape:
 
 ## License
 
-[MIT](LICENSE)
+Distributed under the [MIT License](LICENSE).
