@@ -110,11 +110,11 @@ NODE_ENV=development
 CLIENT_URL=http://localhost:5173
 
 # MongoDB
-MONGO_URI=mongodb+srv://<user>:<password>@cluster.mongodb.net/electronics-store
+MONGO_URI=
 
 # Firebase Admin SDK
 FIREBASE_PROJECT_ID=your-firebase-project-id
-FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your-project.iam.gserviceaccount.com
+FIREBASE_CLIENT_EMAIL=
 FIREBASE_PRIVATE_KEY="-----BEGIN RSA PRIVATE KEY-----\n...\n-----END RSA PRIVATE KEY-----\n"
 ```
 
