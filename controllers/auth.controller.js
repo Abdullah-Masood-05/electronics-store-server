@@ -39,7 +39,7 @@ export const getCurrentUser = async (req, res, next) => {
  */
 export const createOrUpdateUser = async (req, res, next) => {
     try {
-        const { name } = req.body;
+        const { name, role } = req.body;
 
         // req.user is set by authCheck middleware (auto-created if new)
         const user = req.user;
@@ -47,8 +47,15 @@ export const createOrUpdateUser = async (req, res, next) => {
         // Update name if provided
         if (name && name.trim()) {
             user.name = name.trim();
-            await user.save();
         }
+
+        // Update role if provided and valid
+        const allowedRoles = ["user", "admin"];
+        if (role && allowedRoles.includes(role)) {
+            user.role = role;
+        }
+
+        await user.save();
 
         res.status(200).json({
             success: true,
