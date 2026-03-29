@@ -58,6 +58,16 @@ const productSchema = new mongoose.Schema(
         public_id: String,
       },
     ],
+    ratings: [
+      {
+        star: { type: Number, min: 1, max: 5, required: true },
+        postedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+      },
+    ],
     sold: {
       type: Number,
       default: 0,

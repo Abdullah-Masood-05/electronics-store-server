@@ -8,14 +8,22 @@ import {
   update,
   remove,
   totalCount,
+  listByCategory,
+  listBySubCategory,
+  submitRating,
 } from "../controllers/product.controller.js";
 
 const router = express.Router();
 
 // Public
 router.get("/count", totalCount);
+router.get("/category/:slug", listByCategory);
+router.get("/subcategory/:slug", listBySubCategory);
 router.get("/", list);
 router.get("/:slug", read);
+
+// Authenticated
+router.put("/rating", authCheck, submitRating);
 
 // Admin only
 router.post("/", authCheck, authorizeRoles("admin"), create);
