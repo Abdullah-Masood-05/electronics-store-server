@@ -249,3 +249,37 @@ export const submitRating = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * POST /api/products/:slug/click
+ * Increment the click counter for a product (public, fire-and-forget)
+ */
+export const trackClick = async (req, res, next) => {
+  try {
+    await Product.findOneAndUpdate(
+      { slug: req.params.slug },
+      { $inc: { clickCount: 1 } }
+    );
+    res.status(200).json({ success: true });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * GET /api/products/trending?limit=6
+ * Returns top products sorted by clickCount descending
+ */
+export const trending = async (req, res, next) => {
+  try {
+    const limit = parseInt(req.query.limit) || 6;
+    const products = await Product.find({})
+      .populate("category", "name slug")
+      .sort({ clickCount: -1, createdAt: -1 })
+      .limit(limit)
+      .select("title slug price images category clickCount");
+    res.status(200).json({ success: true, products });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -11,14 +11,18 @@ import {
   listByCategory,
   listBySubCategory,
   submitRating,
+  trackClick,
+  trending,
 } from "../controllers/product.controller.js";
 
 const router = express.Router();
 
 // Public
 router.get("/count", totalCount);
+router.get("/trending", trending);
 router.get("/category/:slug", listByCategory);
 router.get("/subcategory/:slug", listBySubCategory);
+router.post("/:slug/click", trackClick);
 router.get("/", list);
 router.get("/:slug", read);
 
