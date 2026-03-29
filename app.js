@@ -6,6 +6,7 @@ import categoryRoutes from "./routes/category.routes.js";
 import subcategoryRoutes from "./routes/subcategory.routes.js";
 import productRoutes from "./routes/product.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
+import dealRoutes from "./routes/deal.routes.js";
 import errorHandler from "./middlewares/error.middleware.js";
 import AppError from "./utils/AppError.js";
 
@@ -38,6 +39,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/subcategories", subcategoryRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/admin", adminRoutes);
+app.use("/api/deals", dealRoutes);
 
 // 404 handler — unmatched routes
 app.use((req, res, next) => {
