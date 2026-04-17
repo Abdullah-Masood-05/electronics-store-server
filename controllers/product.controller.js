@@ -283,3 +283,111 @@ export const trending = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * GET /api/products/search?keyword=&priceMin=&priceMax=&category=&subcategory=&rating=&sort=&page=&limit=
+ * All filters are optional and combinable in a single query.
+ */
+export const search = async (req, res, next) => {
+  try {
+    const {
+      keyword,
+      priceMin,
+      priceMax,
+      category,
+      subcategory,
+      rating,
+      sort: sortParam,
+      page: pageParam,
+      limit: limitParam,
+    } = req.query;
+
+    const page = parseInt(pageParam) || 1;
+    const limit = parseInt(limitParam) || 12;
+    const skip = (page - 1) * limit;
+
+    // Build filter object
+    const filter = {};
+
+    // Keyword — case-insensitive regex on title OR description
+    if (keyword && keyword.trim()) {
+      const regex = { $regex: keyword.trim(), $options: "i" };
+      filter.$or = [{ title: regex }, { description: regex }, { brand: regex }];
+    }
+
+    // Price range
+    if (priceMin || priceMax) {
+      filter.price = {};
+      if (priceMin) filter.price.$gte = parseFloat(priceMin);
+      if (priceMax) filter.price.$lte = parseFloat(priceMax);
+    }
+
+    // Category — accept slug or ObjectId
+    if (category) {
+      const cat = await Category.findOne({
+        $or: [
+          { slug: category },
+          ...(category.match(/^[0-9a-fA-F]{24}$/) ? [{ _id: category }] : []),
+        ],
+      });
+      if (cat) filter.category = cat._id;
+    }
+
+    // Subcategory — accept slug or ObjectId
+    if (subcategory) {
+      const sub = await SubCategory.findOne({
+        $or: [
+          { slug: subcategory },
+          ...(subcategory.match(/^[0-9a-fA-F]{24}$/)
+            ? [{ _id: subcategory }]
+            : []),
+        ],
+      });
+      if (sub) filter.subcategories = sub._id;
+    }
+
+    // Sort
+    const sortMap = {
+      newest: { createdAt: -1 },
+      "price-asc": { price: 1 },
+      "price-desc": { price: -1 },
+      "best-selling": { sold: -1 },
+      popular: { clickCount: -1 },
+    };
+    const sort = sortMap[sortParam] || sortMap.newest;
+
+    // Execute query
+    let [products, total] = await Promise.all([
+      Product.find(filter)
+        .populate("category", "name slug")
+        .populate("subcategories", "name slug")
+        .sort(sort)
+        .skip(skip)
+        .limit(limit),
+      Product.countDocuments(filter),
+    ]);
+
+    // Rating filter — post-query filter because avg rating is computed
+    // from embedded array, not a stored field
+    if (rating) {
+      const minRating = parseFloat(rating);
+      products = products.filter((p) => {
+        if (!p.ratings || p.ratings.length === 0) return false;
+        const avg =
+          p.ratings.reduce((sum, r) => sum + r.star, 0) / p.ratings.length;
+        return avg >= minRating;
+      });
+      total = products.length;
+    }
+
+    res.status(200).json({
+      success: true,
+      products,
+      total,
+      page,
+      pages: Math.ceil(total / limit),
+    });
+  } catch (error) {
+    next(error);
+  }
+};
