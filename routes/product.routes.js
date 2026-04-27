@@ -13,6 +13,7 @@ import {
   submitRating,
   trackClick,
   trending,
+  search,
 } from "../controllers/product.controller.js";
 
 const router = express.Router();
@@ -20,6 +21,7 @@ const router = express.Router();
 // Public
 router.get("/count", totalCount);
 router.get("/trending", trending);
+router.get("/search", search);
 router.get("/category/:slug", listByCategory);
 router.get("/subcategory/:slug", listBySubCategory);
 router.post("/:slug/click", trackClick);
