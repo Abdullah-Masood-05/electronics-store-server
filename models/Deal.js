@@ -36,7 +36,7 @@ const dealSchema = new mongoose.Schema(
       required: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true, strict: true }
 );
 
 export default mongoose.model("Deal", dealSchema);

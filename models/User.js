@@ -17,6 +17,7 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      select: false,
     },
     role: {
       type: String,
@@ -40,7 +41,7 @@ const userSchema = new mongoose.Schema(
       zip: { type: String, default: "" },
     },
   },
-  { timestamps: true }
+  { timestamps: true, strict: true }
 );
 
 export default mongoose.model("User", userSchema);

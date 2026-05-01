@@ -33,7 +33,7 @@ const sessionSchema = new mongoose.Schema(
       index: { expires: 0 }, // MongoDB TTL index (expires when current time > expiresAt)
     },
   },
-  { timestamps: true }
+  { timestamps: true, strict: true }
 );
 
 export default mongoose.models.Session || mongoose.model("Session", sessionSchema);

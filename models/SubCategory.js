@@ -21,7 +21,7 @@ const subCategorySchema = new mongoose.Schema(
       index: true,
     },
   },
-  { timestamps: true }
+  { timestamps: true, strict: true }
 );
 
 export default mongoose.model("SubCategory", subCategorySchema);
