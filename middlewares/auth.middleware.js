@@ -1,5 +1,6 @@
 import admin from "../config/firebase.js";
 import User from "../models/User.js";
+import Session from "../models/Session.js";
 import AppError from "../utils/AppError.js";
 
 /**
@@ -81,8 +82,47 @@ export const authCheck = async (req, res, next) => {
       userCache.set(decodedToken.uid, { data: user, timestamp: now });
     }
 
-    // 4. Attach MongoDB user to request
+    // 4. Attach MongoDB user and decodedToken to request
     req.user = user;
+    req.decodedToken = decodedToken;
+
+    // 5. Session Management Layer
+    const isSessionRegistration = req.originalUrl.includes("/auth/session") && req.method === "POST";
+    
+    if (!isSessionRegistration) {
+      const sessionId = req.cookies?.sessionId;
+      if (!sessionId) {
+        return next(new AppError("No active session found. Please log in.", 401));
+      }
+
+      const session = await Session.findOne({ sessionId });
+      if (!session) {
+        return next(new AppError("Invalid session. Please log in again.", 401));
+      }
+
+      if (session.isRevoked) {
+        return next(new AppError("Session revoked. Please log in again.", 401));
+      }
+
+      if (session.expiresAt < new Date()) {
+        return next(new AppError("Session expired. Please log in again.", 401));
+      }
+
+      if (session.uid !== decodedToken.uid) {
+        console.error(`[SECURITY] Session hijack attempt or mismatch! Expected UID: ${decodedToken.uid}, Found UID: ${session.uid}`);
+        return next(new AppError("Session validation failed.", 401));
+      }
+
+      // Attach session
+      req.session = session;
+
+      // Asynchronously update lastSeenAt
+      Session.updateOne(
+        { _id: session._id },
+        { $set: { lastSeenAt: new Date() } }
+      ).catch(err => console.error("Failed to update lastSeenAt", err));
+    }
+
     next();
   } catch (error) {
     next(new AppError("Authentication failed.", 401));

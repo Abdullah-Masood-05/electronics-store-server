@@ -3,19 +3,25 @@ import { authCheck } from "../middlewares/auth.middleware.js";
 import {
   getCurrentUser,
   createOrUpdateUser,
+  createSession,
+  logoutSession,
+  revokeSession,
+  getSessions,
 } from "../controllers/auth.controller.js";
 
-import { authLimiter } from "../middlewares/rateLimiter.js";
+import { authLimiter, sessionCreationLimiter } from "../middlewares/rateLimiter.js";
+import { authorizeRoles } from "../middlewares/authorize.middleware.js";
 
 const router = express.Router();
 
-// Apply auth limiter to all auth routes
-router.use(authLimiter);
+// --- Session Management ---
+router.post("/session", sessionCreationLimiter, authCheck, createSession);
+router.post("/logout", authLimiter, authCheck, logoutSession);
+router.get("/sessions", authCheck, getSessions);
+router.post("/revoke-session", authLimiter, authCheck, authorizeRoles("admin"), revokeSession);
 
-// GET /api/auth/me — Get current authenticated user profile
+// --- User Profile ---
 router.get("/me", authCheck, getCurrentUser);
-
-// POST /api/auth/create-or-update — Create or update user after registration
-router.post("/create-or-update", authCheck, createOrUpdateUser);
+router.post("/create-or-update", authLimiter, authCheck, createOrUpdateUser);
 
 export default router;

@@ -12,6 +12,7 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.2.3",
     "express": "^5.2.1",
@@ -20,6 +21,7 @@
     "firebase-tools": "^15.5.1",
     "helmet": "^8.1.0",
     "mongoose": "^9.1.5",
-    "stripe": "^22.1.0"
+    "stripe": "^22.1.0",
+    "uuid": "^14.0.0"
   }
 }

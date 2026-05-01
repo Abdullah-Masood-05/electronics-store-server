@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import helmet from "helmet";
+import cookieParser from "cookie-parser";
 import authRoutes from "./routes/auth.routes.js";
 import categoryRoutes from "./routes/category.routes.js";
 import subcategoryRoutes from "./routes/subcategory.routes.js";
@@ -22,10 +23,7 @@ app.set("trust proxy", 1);
 // Security headers
 app.use(helmet());
 
-// Global Rate Limiting
-app.use("/api", globalLimiter);
-
-// CORS configuration
+// CORS configuration (MUST be before Rate Limiting)
 app.use(
   cors({
     origin: process.env.CLIENT_URL || "http://localhost:3000",
@@ -35,8 +33,12 @@ app.use(
   })
 );
 
-// Body parsing
+// Global Rate Limiting
+app.use("/api", globalLimiter);
+
+// Body parsing & Cookies
 app.use(express.json({ limit: "10mb" }));
+app.use(cookieParser());
 
 // Health check
 app.get("/api/health", (req, res) => {

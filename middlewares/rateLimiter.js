@@ -71,3 +71,20 @@ export const sensitiveActionLimiter = rateLimit({
   legacyHeaders: false,
   skip: () => process.env.NODE_ENV === "test",
 });
+
+/**
+ * Session Creation Limiter (/api/auth/session)
+ * 10 requests per hour per IP
+ * Protects against excessive session generation
+ */
+export const sessionCreationLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000, // 1 hour
+  max: 10,
+  message: {
+    status: "fail",
+    message: "Too many session creations requested, please try again later",
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+  skip: () => process.env.NODE_ENV === "test",
+});
