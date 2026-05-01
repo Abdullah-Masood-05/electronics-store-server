@@ -3,6 +3,7 @@ import Session from "../models/Session.js";
 import AppError from "../utils/AppError.js";
 import { v4 as uuidv4 } from "uuid";
 import admin from "../config/firebase.js";
+import { cookieConfig } from "../config/cookie.config.js";
 
 /**
  * GET /api/auth/me
@@ -101,10 +102,7 @@ export const createSession = async (req, res, next) => {
     });
 
     res.cookie("sessionId", sessionId, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "Strict",
-      path: "/",
+      ...cookieConfig,
       maxAge: 30 * 24 * 60 * 60 * 1000,
     });
 
@@ -125,12 +123,7 @@ export const logoutSession = async (req, res, next) => {
       await req.session.save();
     }
 
-    res.clearCookie("sessionId", {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "Strict",
-      path: "/",
-    });
+    res.clearCookie("sessionId", cookieConfig);
 
     res.status(200).json({ success: true, message: "Logged out successfully" });
   } catch (error) {
