@@ -6,8 +6,9 @@ import AppError from "../utils/AppError.js";
  */
 export const create = async (req, res, next) => {
   try {
+    const { code, discount, expiry } = req.body;
     const coupon = await Coupon.create({
-      ...req.body,
+      code, discount, expiry,
       createdBy: req.user._id,
     });
     res.status(201).json({ success: true, coupon });

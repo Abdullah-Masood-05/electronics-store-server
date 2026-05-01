@@ -14,6 +14,7 @@ import orderRoutes from "./routes/order.routes.js";
 import errorHandler from "./middlewares/error.middleware.js";
 import { globalLimiter } from "./middlewares/rateLimiter.js";
 import { csrfGuard } from "./middlewares/csrf.middleware.js";
+import mongoSanitize from "express-mongo-sanitize";
 import AppError from "./utils/AppError.js";
 
 const app = express();
@@ -68,6 +69,16 @@ app.use("/api", globalLimiter);
 // Body parsing & Cookies
 app.use(express.json({ limit: "10mb" }));
 app.use(cookieParser());
+
+// NoSQL Injection Protection
+app.use((req, res, next) => {
+  ['body', 'params', 'headers', 'query'].forEach((key) => {
+    if (req[key]) {
+      mongoSanitize.sanitize(req[key], { replaceWith: '_' });
+    }
+  });
+  next();
+});
 
 // CSRF Protection (MUST be after body parsing and CORS)
 app.use(csrfGuard);

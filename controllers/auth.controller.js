@@ -43,7 +43,7 @@ export const getCurrentUser = async (req, res, next) => {
  */
 export const createOrUpdateUser = async (req, res, next) => {
     try {
-        const { name, role } = req.body;
+        const { name } = req.body;
 
         // req.user is set by authCheck middleware (auto-created if new)
         const user = req.user;
@@ -53,11 +53,7 @@ export const createOrUpdateUser = async (req, res, next) => {
             user.name = name.trim();
         }
 
-        // Update role if provided and valid
-        const allowedRoles = ["user", "admin"];
-        if (role && allowedRoles.includes(role)) {
-            user.role = role;
-        }
+        // CRITICAL: NEVER allow role, _id, firebaseUid, etc. to be updated via req.body
 
         await user.save();
 

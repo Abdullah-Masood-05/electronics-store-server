@@ -6,8 +6,9 @@ import AppError from "../utils/AppError.js";
  */
 export const create = async (req, res, next) => {
   try {
+    const { product, type, value, validUntil, active } = req.body;
     const deal = await Deal.create({
-      ...req.body,
+      product, type, value, validUntil, active,
       createdBy: req.user._id,
     });
     res.status(201).json({ success: true, deal });
@@ -51,7 +52,11 @@ export const listAll = async (req, res, next) => {
  */
 export const update = async (req, res, next) => {
   try {
-    const deal = await Deal.findByIdAndUpdate(req.params.id, req.body, {
+    const { product, type, value, validUntil, active } = req.body;
+    const updateData = { product, type, value, validUntil, active };
+    Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
+
+    const deal = await Deal.findByIdAndUpdate(req.params.id, updateData, {
       new: true,
       runValidators: true,
     })

@@ -3,14 +3,18 @@ import Category from "../models/Category.js";
 import SubCategory from "../models/SubCategory.js";
 import AppError from "../utils/AppError.js";
 import slugify from "../utils/slugify.js";
+import { escapeRegex, safeSortConfig, safePositiveInt, safeFloat } from "../utils/sanitize.utils.js";
 
 /**
  * POST /api/products
  */
 export const create = async (req, res, next) => {
   try {
-    req.body.slug = slugify(req.body.title);
-    const product = await Product.create(req.body);
+    const { title, description, price, category, subcategories, quantity, images, color, brand } = req.body;
+    const slug = slugify(title || "");
+    const product = await Product.create({
+      title, description, price, category, subcategories, quantity, images, color, brand, slug
+    });
     res.status(201).json({ success: true, product });
   } catch (error) {
     next(error);
@@ -22,18 +26,11 @@ export const create = async (req, res, next) => {
  */
 export const list = async (req, res, next) => {
   try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const page = safePositiveInt(req.query.page, 1, 1000);
+    const limit = safePositiveInt(req.query.limit, 10, 50);
     const skip = (page - 1) * limit;
 
-    // Sort options
-    const sortMap = {
-      newest: { createdAt: -1 },
-      "price-asc": { price: 1 },
-      "price-desc": { price: -1 },
-      "best-selling": { sold: -1 },
-    };
-    const sort = sortMap[req.query.sort] || sortMap.newest;
+    const sort = safeSortConfig(req.query.sort);
 
     const [products, total] = await Promise.all([
       Product.find({})
@@ -78,12 +75,19 @@ export const read = async (req, res, next) => {
  */
 export const update = async (req, res, next) => {
   try {
-    if (req.body.title) {
-      req.body.slug = slugify(req.body.title);
+    const { title, description, price, category, subcategories, quantity, images, color, brand } = req.body;
+    const updateData = { title, description, price, category, subcategories, quantity, images, color, brand };
+    
+    // Remove undefined keys so we don't accidentally overwrite with undefined
+    Object.keys(updateData).forEach(key => updateData[key] === undefined && delete updateData[key]);
+
+    if (updateData.title) {
+      updateData.slug = slugify(updateData.title);
     }
+
     const updated = await Product.findOneAndUpdate(
       { slug: req.params.slug },
-      req.body,
+      updateData,
       { new: true, runValidators: true }
     )
       .populate("category", "name slug")
@@ -129,8 +133,8 @@ export const listByCategory = async (req, res, next) => {
     const category = await Category.findOne({ slug: req.params.slug });
     if (!category) return next(new AppError("Category not found", 404));
 
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 12;
+    const page = safePositiveInt(req.query.page, 1, 1000);
+    const limit = safePositiveInt(req.query.limit, 12, 50);
     const skip = (page - 1) * limit;
 
     const [products, total] = await Promise.all([
@@ -167,8 +171,8 @@ export const listBySubCategory = async (req, res, next) => {
     );
     if (!sub) return next(new AppError("Sub-category not found", 404));
 
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 12;
+    const page = safePositiveInt(req.query.page, 1, 1000);
+    const limit = safePositiveInt(req.query.limit, 12, 50);
     const skip = (page - 1) * limit;
 
     const [products, total] = await Promise.all([
@@ -272,7 +276,7 @@ export const trackClick = async (req, res, next) => {
  */
 export const trending = async (req, res, next) => {
   try {
-    const limit = parseInt(req.query.limit) || 6;
+    const limit = safePositiveInt(req.query.limit, 6, 20);
     const products = await Product.find({})
       .populate("category", "name slug")
       .sort({ clickCount: -1, createdAt: -1 })
@@ -302,24 +306,25 @@ export const search = async (req, res, next) => {
       limit: limitParam,
     } = req.query;
 
-    const page = parseInt(pageParam) || 1;
-    const limit = parseInt(limitParam) || 12;
+    const page = safePositiveInt(pageParam, 1, 1000);
+    const limit = safePositiveInt(limitParam, 12, 50);
     const skip = (page - 1) * limit;
 
     // Build filter object
     const filter = {};
 
-    // Keyword — case-insensitive regex on title OR description
+    // Keyword — case-insensitive regex on title OR description (ReDoS Protected)
     if (keyword && keyword.trim()) {
-      const regex = { $regex: keyword.trim(), $options: "i" };
+      const safeKeyword = escapeRegex(keyword.trim());
+      const regex = { $regex: safeKeyword, $options: "i" };
       filter.$or = [{ title: regex }, { description: regex }, { brand: regex }];
     }
 
-    // Price range
+    // Price range (Type Coercion)
     if (priceMin || priceMax) {
       filter.price = {};
-      if (priceMin) filter.price.$gte = parseFloat(priceMin);
-      if (priceMax) filter.price.$lte = parseFloat(priceMax);
+      if (priceMin) filter.price.$gte = safeFloat(priceMin, 0, 1000000);
+      if (priceMax) filter.price.$lte = safeFloat(priceMax, 0, 1000000);
     }
 
     // Category — accept slug or ObjectId
@@ -347,14 +352,7 @@ export const search = async (req, res, next) => {
     }
 
     // Sort
-    const sortMap = {
-      newest: { createdAt: -1 },
-      "price-asc": { price: 1 },
-      "price-desc": { price: -1 },
-      "best-selling": { sold: -1 },
-      popular: { clickCount: -1 },
-    };
-    const sort = sortMap[sortParam] || sortMap.newest;
+    const sort = safeSortConfig(sortParam);
 
     // Execute query
     let [products, total] = await Promise.all([
