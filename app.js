@@ -11,12 +11,19 @@ import cartRoutes from "./routes/cart.routes.js";
 import couponRoutes from "./routes/coupon.routes.js";
 import orderRoutes from "./routes/order.routes.js";
 import errorHandler from "./middlewares/error.middleware.js";
+import { globalLimiter } from "./middlewares/rateLimiter.js";
 import AppError from "./utils/AppError.js";
 
 const app = express();
 
+// Trust proxy for rate limiting behind load balancers/reverse proxies
+app.set("trust proxy", 1);
+
 // Security headers
 app.use(helmet());
+
+// Global Rate Limiting
+app.use("/api", globalLimiter);
 
 // CORS configuration
 app.use(

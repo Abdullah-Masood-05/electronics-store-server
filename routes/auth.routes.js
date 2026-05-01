@@ -5,7 +5,12 @@ import {
   createOrUpdateUser,
 } from "../controllers/auth.controller.js";
 
+import { authLimiter } from "../middlewares/rateLimiter.js";
+
 const router = express.Router();
+
+// Apply auth limiter to all auth routes
+router.use(authLimiter);
 
 // GET /api/auth/me — Get current authenticated user profile
 router.get("/me", authCheck, getCurrentUser);
