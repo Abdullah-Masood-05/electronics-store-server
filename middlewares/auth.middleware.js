@@ -3,14 +3,22 @@ import User from "../models/User.js";
 import AppError from "../utils/AppError.js";
 
 /**
+ * SAFEGUARD 1: NEVER ATTACH ROLES TO FIREBASE CUSTOM CLAIMS.
+ * All role-based authorization must rely exclusively on the MongoDB `role` field.
+ * Firebase custom claims are difficult to invalidate immediately without forcing 
+ * token revocation on every role change.
+ * 
  * Authentication middleware.
  * Extracts Firebase ID token from Authorization header,
  * verifies it (including revocation check), looks up the
  * MongoDB user, and attaches it to req.user.
- *
- * If the user doesn't exist in MongoDB yet (first login),
- * a new user document is automatically created.
  */
+
+// SAFEGUARD 2: MongoDB query result cache (Strictly TTL of 0)
+// As requested, we use a TTL of 0 so the MongoDB fetch is non-optional and never short-circuited.
+const userCache = new Map();
+const CACHE_TTL_MS = 0; // 0 seconds (always fetch fresh)
+
 export const authCheck = async (req, res, next) => {
   try {
     // 1. Extract token
@@ -43,17 +51,34 @@ export const authCheck = async (req, res, next) => {
       return next(new AppError("Authentication failed.", 401));
     }
 
-    // 3. Find or create MongoDB user
-    let user = await User.findOne({ firebaseUid: decodedToken.uid });
+    // SAFEGUARD 3: Guard against token-based roles
+    if (decodedToken.role || decodedToken.admin) {
+      return next(new AppError("SECURITY VIOLATION: Role found in Firebase token. Roles must strictly originate from the MongoDB database.", 403));
+    }
 
-    if (!user) {
-      // Auto-create user on first login
-      user = await User.create({
-        firebaseUid: decodedToken.uid,
-        email: decodedToken.email,
-        name: decodedToken.name || decodedToken.email?.split("@")[0] || "User",
-        role: "user",
-      });
+    // Check Cache first
+    const now = Date.now();
+    const cachedUser = userCache.get(decodedToken.uid);
+    let user;
+
+    if (cachedUser && (now - cachedUser.timestamp < CACHE_TTL_MS)) {
+      user = cachedUser.data;
+    } else {
+      // 3. Find or create MongoDB user (never optional)
+      user = await User.findOne({ firebaseUid: decodedToken.uid });
+
+      if (!user) {
+        // Auto-create user on first login
+        user = await User.create({
+          firebaseUid: decodedToken.uid,
+          email: decodedToken.email,
+          name: decodedToken.name || decodedToken.email?.split("@")[0] || "User",
+          role: "user",
+        });
+      }
+
+      // Update cache
+      userCache.set(decodedToken.uid, { data: user, timestamp: now });
     }
 
     // 4. Attach MongoDB user to request
