@@ -11,6 +11,7 @@ import dealRoutes from "./routes/deal.routes.js";
 import cartRoutes from "./routes/cart.routes.js";
 import couponRoutes from "./routes/coupon.routes.js";
 import orderRoutes from "./routes/order.routes.js";
+import wishlistRoutes from "./routes/wishlist.routes.js";
 import errorHandler from "./middlewares/error.middleware.js";
 import { globalLimiter } from "./middlewares/rateLimiter.js";
 import { csrfGuard } from "./middlewares/csrf.middleware.js";
@@ -98,6 +99,7 @@ app.use("/api/deals", dealRoutes);
 app.use("/api/cart", cartRoutes);
 app.use("/api/coupons", couponRoutes);
 app.use("/api/orders", orderRoutes);
+app.use("/api/wishlist", wishlistRoutes);
 
 // 404 handler — unmatched routes
 app.use((req, res, next) => {
