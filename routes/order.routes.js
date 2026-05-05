@@ -6,20 +6,24 @@ import {
   createStripeIntent,
   confirmStripeOrder,
   getUserOrders,
+  getOrderById,
   getAllOrders,
   updateOrderStatus,
 } from "../controllers/order.controller.js";
 
 const router = express.Router();
 
-// User
+// User routes (specific paths MUST come before /:id wildcard)
 router.get("/mine", authCheck, getUserOrders);
 router.post("/cod", authCheck, createCodOrder);
 router.post("/stripe/intent", authCheck, createStripeIntent);
 router.post("/stripe/confirm", authCheck, confirmStripeOrder);
 
-// Admin
+// Admin routes (also specific, must precede /:id)
 router.get("/all", authCheck, authorizeRoles("admin"), getAllOrders);
 router.put("/:id/status", authCheck, authorizeRoles("admin"), updateOrderStatus);
+
+// Wildcard — must be LAST
+router.get("/:id", authCheck, getOrderById);
 
 export default router;

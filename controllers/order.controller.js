@@ -209,6 +209,32 @@ export const getUserOrders = async (req, res, next) => {
 };
 
 /**
+ * GET /api/orders/:id — single order detail
+ * Users can only access their own orders; admins can access any.
+ */
+export const getOrderById = async (req, res, next) => {
+  try {
+    const order = await Order.findById(req.params.id)
+      .populate("products.product", "title slug images price brand")
+      .populate("coupon", "code discount")
+      .populate("orderedBy", "name email");
+
+    if (!order) return next(new AppError("Order not found", 404));
+
+    // Ownership check — admins bypass
+    const isOwner = order.orderedBy._id.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === "admin";
+    if (!isOwner && !isAdmin) {
+      return next(new AppError("Not authorized to view this order", 403));
+    }
+
+    res.status(200).json({ success: true, order });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * GET /api/orders/all — admin: all orders
  */
 export const getAllOrders = async (req, res, next) => {
