@@ -21,9 +21,12 @@ It uses Firebase tokens for auth and stores app data in MongoDB.
 - Auto-creates user records in MongoDB on first login
 - Full CRUD for categories, subcategories, and products
 - Shopping cart management
+- Wishlist management (add, remove, retrieve)
 - Order processing with Stripe payment integration
+- Order retrieval with role-based authorization (users view their own, admins view all)
 - Coupon and discount code validation
 - Role-based access control (user/admin)
+- Admin dashboard with stats (total orders, pending/processing counts, total revenue)
 - Rate limiting on API endpoints for DDoS protection
 - Simple health check: `/api/health`
 
