@@ -17,6 +17,20 @@ import { globalLimiter } from "./middlewares/rateLimiter.js";
 import { csrfGuard } from "./middlewares/csrf.middleware.js";
 import mongoSanitize from "express-mongo-sanitize";
 import AppError from "./utils/AppError.js";
+import { notFound } from "./middlewares/notFound.middleware.js";
+
+// Global process error handlers
+process.on("uncaughtException", (err) => {
+  console.error("UNCAUGHT EXCEPTION! Shutting down...");
+  console.error(err.name, err.message);
+  process.exit(1);
+});
+
+process.on("unhandledRejection", (err) => {
+  console.error("UNHANDLED REJECTION! Shutting down...");
+  console.error(err.name, err.message);
+  process.exit(1);
+});
 
 const app = express();
 
@@ -102,9 +116,7 @@ app.use("/api/orders", orderRoutes);
 app.use("/api/wishlist", wishlistRoutes);
 
 // 404 handler — unmatched routes
-app.use((req, res, next) => {
-  next(new AppError(`Cannot find ${req.originalUrl} on this server`, 404));
-});
+app.use(notFound);
 
 // Centralized error handler (must be last)
 app.use(errorHandler);
