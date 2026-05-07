@@ -36,7 +36,7 @@ nano .env
 Paste your production environment variables:
 ```env
 PORT=8000
-MONGO_URI=mongodb+srv://...
+MONGO_URI=mongodb+srv://bscs22054_db_user:AHCsCt3nFtOjImsD@electrostore.ko0ny0q.mongodb.net/electrostore?appName=ElectroStore
 JWT_SECRET=your_super_secret_key
 JWT_EXPIRES_IN=7d
 ALLOWED_ORIGIN=https://your-frontend-domain.com

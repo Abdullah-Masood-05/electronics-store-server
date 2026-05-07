@@ -74,12 +74,12 @@ export const sensitiveActionLimiter = rateLimit({
 
 /**
  * Session Creation Limiter (/api/auth/session)
- * 10 requests per hour per IP
+ * 30 requests per 15 minutes per IP
  * Protects against excessive session generation
  */
 export const sessionCreationLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 10,
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30,
   message: {
     status: "fail",
     message: "Too many session creations requested, please try again later",
