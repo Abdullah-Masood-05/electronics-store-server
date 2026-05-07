@@ -7,6 +7,7 @@ import {
   confirmStripeOrder,
   getUserOrders,
   getOrderById,
+  generateInvoice,
   getAllOrders,
   updateOrderStatus,
 } from "../controllers/order.controller.js";
@@ -23,7 +24,8 @@ router.post("/stripe/confirm", authCheck, confirmStripeOrder);
 router.get("/all", authCheck, authorizeRoles("admin"), getAllOrders);
 router.put("/:id/status", authCheck, authorizeRoles("admin"), updateOrderStatus);
 
-// Wildcard — must be LAST
+// Wildcard routes
+router.get("/:id/invoice", authCheck, generateInvoice);
 router.get("/:id", authCheck, getOrderById);
 
 export default router;

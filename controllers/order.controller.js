@@ -235,6 +235,115 @@ export const getOrderById = async (req, res, next) => {
 };
 
 /**
+ * GET /api/orders/:id/invoice — download invoice PDF
+ */
+export const generateInvoice = async (req, res, next) => {
+  try {
+    const order = await Order.findById(req.params.id)
+      .populate("products.product", "title price")
+      .populate("orderedBy", "name email");
+
+    if (!order) return next(new AppError("Order not found", 404));
+
+    const isOwner = order.orderedBy._id.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === "admin";
+    if (!isOwner && !isAdmin) {
+      return next(new AppError("Not authorized to view this invoice", 403));
+    }
+
+    // Dynamic import for pdfkit
+    const PDFDocument = (await import("pdfkit")).default;
+
+    const doc = new PDFDocument({ margin: 50 });
+
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=invoice-${order._id.toString().slice(-8).toUpperCase()}.pdf`
+    );
+
+    doc.pipe(res);
+
+    // Header
+    doc.fontSize(20).text("INVOICE", { align: "right" });
+    doc.fontSize(10).text(`Order ID: #${order._id.toString().slice(-8).toUpperCase()}`, { align: "right" });
+    doc.text(`Date: ${new Date(order.createdAt).toLocaleDateString()}`, { align: "right" });
+    doc.moveDown(2);
+
+    // Company Info
+    doc.fontSize(20).text("ElectroStore", 50, 50);
+    doc.fontSize(10).text("123 Tech Avenue\nSilicon Valley, CA 94025\nsupport@electrostore.com");
+    doc.moveDown(2);
+
+    // Bill To
+    doc.fontSize(12).text("Billed To:", 50, doc.y);
+    doc.fontSize(10).text(
+      `${order.orderedBy.name || "Customer"}\n${order.orderedBy.email}\n${order.address?.street || ""}\n${order.address?.city || ""}, ${order.address?.state || ""} ${order.address?.zip || ""}`
+    );
+    doc.moveDown(2);
+
+    // Table Header
+    const tableTop = doc.y;
+    doc.font("Helvetica-Bold");
+    doc.text("Item", 50, tableTop);
+    doc.text("Qty", 350, tableTop, { width: 50, align: "center" });
+    doc.text("Price", 400, tableTop, { width: 50, align: "right" });
+    doc.text("Total", 480, tableTop, { width: 50, align: "right" });
+    doc.moveTo(50, tableTop + 15).lineTo(530, tableTop + 15).stroke();
+    doc.font("Helvetica");
+
+    // Table Rows
+    let y = tableTop + 25;
+    let subtotal = 0;
+
+    order.products.forEach((item) => {
+      const p = item.product;
+      const title = p?.title || "Unknown Product";
+      const itemTotal = item.count * item.price;
+      subtotal += itemTotal;
+
+      doc.text(title, 50, y, { width: 280 });
+      doc.text(item.count.toString(), 350, y, { width: 50, align: "center" });
+      doc.text(`$${item.price.toFixed(2)}`, 400, y, { width: 50, align: "right" });
+      doc.text(`$${itemTotal.toFixed(2)}`, 480, y, { width: 50, align: "right" });
+      
+      // Calculate row height (title can wrap)
+      const height = doc.heightOfString(title, { width: 280 });
+      y += height + 10;
+    });
+
+    doc.moveTo(50, y).lineTo(530, y).stroke();
+    y += 15;
+
+    // Totals
+    doc.text("Subtotal:", 350, y, { width: 100, align: "right" });
+    doc.text(`$${subtotal.toFixed(2)}`, 480, y, { width: 50, align: "right" });
+    y += 15;
+
+    if (order.coupon) {
+      doc.text("Discount:", 350, y, { width: 100, align: "right" });
+      const discountAmount = subtotal - order.totalAmount;
+      doc.text(`-$${discountAmount.toFixed(2)}`, 480, y, { width: 50, align: "right" });
+      y += 15;
+    }
+
+    doc.font("Helvetica-Bold");
+    doc.text("Total Amount:", 350, y, { width: 100, align: "right" });
+    doc.text(`$${order.totalAmount.toFixed(2)}`, 480, y, { width: 50, align: "right" });
+    doc.font("Helvetica");
+    y += 25;
+
+    // Footer
+    doc.fontSize(10).text(`Payment Method: ${order.paymentMethod === "stripe" ? "Credit Card" : "Cash on Delivery"}`, 50, y);
+    doc.text(`Status: ${order.orderStatus}`, 50, y + 15);
+
+    doc.end();
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
  * GET /api/orders/all — admin: all orders
  */
 export const getAllOrders = async (req, res, next) => {
