@@ -5,6 +5,6 @@
 export const cookieConfig = {
   httpOnly: true, // JS cannot read the cookie
   secure: process.env.NODE_ENV === "production", // HTTPS only in prod
-  sameSite: "Strict", // Blocks cross-site sending entirely
+  sameSite: process.env.NODE_ENV === "production" ? "None" : "Strict", // Allow cross-origin in production
   path: "/",
 };

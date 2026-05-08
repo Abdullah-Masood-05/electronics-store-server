@@ -1,106 +1,46 @@
-# Backend Deployment Guide (Digital Ocean)
+# Backend Deployment Guide (Render)
 
-This guide covers deploying the ElectroStore backend to an Ubuntu 22.04 Droplet using Docker and Nginx.
+This guide covers deploying the ElectroStore backend to **Render**, utilizing its native Docker support for robust and easy deployment.
 
-## 1. Provision a Droplet
-- Create a new Droplet on Digital Ocean using the **Ubuntu 22.04** image.
-- Select a size (e.g., Basic, 1GB RAM) and add your SSH key.
-- SSH into your server: `ssh root@<your-server-ip>`
+## 1. Push to GitHub
+Ensure all your local changes are committed and pushed to your server repository.
+```bash
+git add .
+git commit -m "Prepare for Render deployment"
+git push origin main
+```
+*Your Server Repository:* `https://github.com/Abdullah-Masood-05/electronics-store-server.git`
 
-## 2. Install Docker
-Run the following commands to install Docker:
-```bash
-sudo apt update
-sudo apt install -y apt-transport-https ca-certificates curl software-properties-common
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-sudo apt update
-sudo apt install -y docker-ce docker-ce-cli containerd.io
-```
+## 2. Prepare Environment Variables
+Before deploying, have your `.env` variables ready. You will need to paste these into Render. 
+**Crucial Note:** Ensure `MONGO_URI` is your MongoDB Atlas connection string, not `localhost`.
 
-## 3. Database Setup (MongoDB)
-It is highly recommended to use **MongoDB Atlas** for a production database.
-- Create a free tier cluster on [MongoDB Atlas](https://www.mongodb.com/cloud/atlas).
-- Set network access to `0.0.0.0/0` (or specifically whitelist your Droplet IP).
-- Get your connection string (e.g., `mongodb+srv://...`).
+## 3. Deploy to Render
+1. Log in to [Render](https://render.com) (you can sign in with GitHub).
+2. Click **New +** > **Web Service**.
+3. Select **Build and deploy from a Git repository**.
+4. Connect your GitHub account (if not already done) and search for your server repository: `electronics-store-server`. Click **Connect**.
+5. **Configuration Settings:**
+   - **Name:** `electrostore-api` (or any name you prefer)
+   - **Region:** Choose the one closest to your users.
+   - **Branch:** `main`
+   - **Root Directory:** Leave blank (since the Dockerfile is in the root of the repo).
+   - **Environment:** Select **Docker**. (Render will automatically detect your `Dockerfile`).
+   - **Instance Type:** Free tier is fine to start.
 
-## 4. Clone and Configure
-```bash
-git clone <your-repo-url> electrostore
-cd electrostore/electronics-store-server
-```
-Create an `.env` file:
-```bash
-nano .env
-```
-Paste your production environment variables:
-```env
-PORT=8000
-MONGO_URI=mongodb+srv://bscs22054_db_user:AHCsCt3nFtOjImsD@electrostore.ko0ny0q.mongodb.net/electrostore?appName=ElectroStore
-JWT_SECRET=your_super_secret_key
-JWT_EXPIRES_IN=7d
-ALLOWED_ORIGIN=https://your-frontend-domain.com
-STRIPE_SECRET_KEY=sk_live_...
-FIREBASE_PROJECT_ID=...
-FIREBASE_CLIENT_EMAIL=...
-FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
-```
+6. **Environment Variables:**
+   Scroll down to "Environment Variables" and click **Add from .env**. Paste the contents of your local `.env` file.
+   *Important overrides:*
+   - Ensure `PORT` is omitted or set to the default (Render handles ports automatically, but setting `PORT=8000` is fine as our code reads it).
+   - Set `ALLOWED_ORIGIN` to your future Netlify frontend URL (e.g., `https://your-app-name.netlify.app`). If you don't know it yet, you can use `*` temporarily, but change it later for security.
 
-## 5. Build and Run Docker Container
-Build the image:
-```bash
-docker build -t electrostore-api .
-```
-Run the container:
-```bash
-docker run -d -p 8000:8000 --name api --env-file .env --restart unless-stopped electrostore-api
-```
-Check logs:
-```bash
-docker logs -f api
-```
+7. Click **Create Web Service**.
 
-## 6. Nginx Reverse Proxy
-Install Nginx:
-```bash
-sudo apt install -y nginx
-```
-Configure a server block:
-```bash
-nano /etc/nginx/sites-available/electrostore
-```
-```nginx
-server {
-    listen 80;
-    server_name api.yourdomain.com;
+## 4. Finalize
+Render will now build your Docker container and deploy it. This might take 3-5 minutes.
+Once the status says **Live**, you will see a URL at the top left, looking something like `https://electrostore-api.onrender.com`.
 
-    location / {
-        proxy_pass http://localhost:8000;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection 'upgrade';
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_cache_bypass $http_upgrade;
-    }
-}
-```
-Enable the site:
-```bash
-sudo ln -s /etc/nginx/sites-available/electrostore /etc/nginx/sites-enabled/
-sudo nginx -t
-sudo systemctl restart nginx
-```
+**Test the deployment:**
+Go to `https://electrostore-api.onrender.com/api/health` in your browser. If you see `{"status":"OK","message":"API running"}`, your server is officially live!
 
-## 7. SSL with Certbot
-Install Certbot:
-```bash
-sudo apt install -y certbot python3-certbot-nginx
-```
-Generate SSL Certificate:
-```bash
-sudo certbot --nginx -d api.yourdomain.com
-```
-Your backend is now fully deployed and secure!
+*Save this URL — you will need it for the frontend's `NEXT_PUBLIC_API_URL` environment variable.*
